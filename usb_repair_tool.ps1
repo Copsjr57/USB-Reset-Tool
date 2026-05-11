@@ -124,9 +124,13 @@ function Run-DiskpartWipeAndFormat {
 
     $prelude = @(
         "select disk $DiskNumber",
-        'attributes disk clear readonly',
-        'online disk noerr'
+        'attributes disk clear readonly'
     )
+
+    $disk = Get-Disk -Number $DiskNumber -ErrorAction SilentlyContinue
+    if ($null -ne $disk -and $disk.IsOffline) {
+        $prelude += 'online disk'
+    }
 
     $wipeLine = $null
     if ($ResetMode -eq 'CLEAN') { $wipeLine = 'clean' }
