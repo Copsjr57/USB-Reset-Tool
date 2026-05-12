@@ -100,13 +100,18 @@ function Invoke-Diskpart {
     $temp = [IO.Path]::Combine($env:TEMP, "diskpart_usb_repair_{0}.txt" -f ([Guid]::NewGuid().ToString('N')))
     try {
         [IO.File]::WriteAllLines($temp, $ScriptLines)
-        $p = Start-Process -FilePath 'diskpart.exe' -ArgumentList "/s `"$temp`"" -NoNewWindow -PassThru
+        $p = Start-Process -FilePath 'diskpart.exe' -ArgumentList '/s', $temp -NoNewWindow -PassThru
         if (-not $p.WaitForExit($TimeoutSeconds * 1000)) {
             try { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue } catch { }
             throw "DiskPart hung (timeout ${TimeoutSeconds}s)."
         }
-        if ($p.ExitCode -ne 0) {
+
+        $p.Refresh()
+        if ($p.ExitCode -ne $null -and $p.ExitCode -ne 0) {
             throw "DiskPart failed (ExitCode=$($p.ExitCode))."
+        }
+        if ($p.ExitCode -eq $null) {
+            Write-Host 'DiskPart exited with no exit code; assuming success.' -ForegroundColor Yellow
         }
     } finally {
         if (Test-Path $temp) { Remove-Item -LiteralPath $temp -Force -ErrorAction SilentlyContinue }
